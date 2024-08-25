@@ -1,6 +1,4 @@
-import https from "https";
-import fs from "fs";
-import path from "path";
+import http from "http";
 import bodyParser from "body-parser";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -24,18 +22,8 @@ const server: Express = express();
 // Database location
 const dbUri = `mongodb://${config.mongodb.host}:${config.mongodb.port}/${config.mongodb.name}`;
 
-// Create https server
-const tlsServer = https.createServer(
-  {
-    key: fs.readFileSync(
-      path.join(process.env.PWD || "", "certificates", "key.key"),
-    ),
-    cert: fs.readFileSync(
-      path.join(process.env.PWD || "", "certificates", "cert.crt"),
-    ),
-  },
-  server,
-);
+// Create http server
+const httpServer = http.createServer(server);
 
 // Connect to database
 mongoose.connect(dbUri);
@@ -50,7 +38,7 @@ server.use(cors(options));
 server.use(httpLogger);
 
 // Websocket entry point
-const IO = socketServer(tlsServer);
+const IO = socketServer(httpServer);
 startWebSocket(IO);
 server.set("io", IO);
 
@@ -64,8 +52,8 @@ server.all("*", (req: Request, res: Response, next: NextFunction) => {
   return next({ status: 404, message: "Resource does not exist." });
 });
 
-// Init tls server
-tlsServer.listen(config.socket.port, async () => {
+// Init server
+httpServer.listen(config.socket.port, () => {
   logger.info(`Server listen on port ${config.socket.port}`);
 });
 
